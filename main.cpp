@@ -8,11 +8,14 @@
 #include <sstream>
 #include <iostream>
 
+#include <thread>
+#include <atomic>
+
 class FtpServer
 {
 private:
     std::vector<pollfd> sockets;
-    std::map<int, FILE *> files;
+    std::map<int, std::pair<FILE *, std::string> > files;
     sockaddr_in serverAddress;
     int fileCounder = 0;
     int bufforSize = 64;
@@ -25,7 +28,7 @@ public:
     int createSocket();
     int bindSocket();
     int listenSocket(int backlog);
-    int receiveFiles();
+    int receiveFiles(std::atomic_bool &onSwitch);
     std::string createFileName(sockaddr_in p_socketAddres);
     int createFile(int fileDescriptor, sockaddr_in p_socketAddres);
     int handleNewConnections(int &index);
@@ -39,6 +42,11 @@ FtpServer::FtpServer(int p_bufforSize, int p_port) : bufforSize(p_bufforSize), p
 FtpServer::~FtpServer()
 {
     close(sockets.front().fd);
+    sockets.erase(sockets.begin());
+    for (int index = 0; index < sockets.size(); index++){
+        std::remove(files.at(sockets[index].fd).second.c_str());
+        closeFileAndSocket(index);
+    }
 }
 
 int FtpServer::createSocket()
@@ -113,7 +121,7 @@ int FtpServer::createFile(int fileDescriptor, sockaddr_in p_socketAddres)
         return 1;
     }
     std::cout << "Created File: " << fileName << std::endl;
-    files.insert(std::pair<int, FILE *>(fileDescriptor, file));
+    files.insert(std::pair<int, std::pair<FILE *, std::string> >(fileDescriptor, std::pair<FILE *, std::string>(file, fileName)));
 
     return 0;
 }
@@ -145,16 +153,18 @@ int FtpServer::handleNewConnections(int &index)
 void FtpServer::closeFileAndSocket(int &index)
 {
     close(sockets[index].fd);
-    fclose(files.at(sockets[index].fd));
+    fclose(files.at(sockets[index].fd).first);
     files.erase(sockets[index].fd);
     sockets.erase(sockets.begin() + index);
     index--;
+
 }
 
 int FtpServer::writeDataToFile(int &index, char *buffor, int recivedBytes)
 {
-    if (fwrite(buffor, 1, bufforSize, files.at(sockets[index].fd)) <= 0)
+    if (fwrite(buffor, 1, bufforSize, files.at(sockets[index].fd).first) <= 0)
     {
+        std::remove(files.at(sockets[index].fd).second.c_str());
         closeFileAndSocket(index);
         std::cerr << "File write failed";
         return 1;
@@ -171,6 +181,7 @@ int FtpServer::handleExistingConnections(int &index)
 
     if (recivedBytes == -1)
     {
+        std::remove(files.at(sockets[index].fd).second.c_str());
         closeFileAndSocket(index);
         std::cerr << "Socket failed";
         return 1;
@@ -188,9 +199,9 @@ int FtpServer::handleExistingConnections(int &index)
     return 0;
 }
 
-int FtpServer::receiveFiles()
+int FtpServer::receiveFiles(std::atomic_bool &onSwitch)
 {
-    while (true)
+    while (onSwitch)
     {
         if (poll(&sockets.front(), sockets.size(), 0))
         {
@@ -210,10 +221,32 @@ int FtpServer::receiveFiles()
                 }
         }
     }
+
+    std::cout << "Program turned off manualy" << std::endl;
+    return 0;
+}
+
+void turnSwitchOff(std::atomic_bool &onSwitch)
+{
+    while (true)
+    {
+        std::string consoleInput;
+        std::cin >> consoleInput;
+        if (consoleInput == "exit")
+        {
+            onSwitch = false;
+            break;
+        }
+    }
 }
 
 int main()
 {
+    std::atomic_bool onSwitch{true};
+
+    std::cout << "Type \"exit\" to stop the program" << std::endl
+              << std::endl;
+
     auto server = FtpServer();
     if (server.createSocket())
         return 1;
@@ -221,5 +254,12 @@ int main()
         return 2;
     if (server.listenSocket())
         return 3;
-    server.receiveFiles();
+
+    std::thread receiveFilesThread(&FtpServer::receiveFiles, &server, std::ref(onSwitch));
+    std::thread turnSwitchOffThread(&turnSwitchOff, std::ref(onSwitch));
+
+    receiveFilesThread.join();
+    turnSwitchOffThread.join();
+
+    return 0;
 }
