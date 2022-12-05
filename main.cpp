@@ -1,27 +1,10 @@
 #include <iostream>
 #include <thread>
-#include <atomic>
 
 #include "FtpServer.hpp"
 
-void turnSwitchOff(std::atomic_bool &onSwitch)
-{
-    while (true)
-    {
-        std::string consoleInput;
-        std::cin >> consoleInput;
-        if (consoleInput == "exit")
-        {
-            onSwitch = false;
-            break;
-        }
-    }
-}
-
 int main()
 {
-    std::atomic_bool onSwitch{true};
-
     std::cout << "Type \"exit\" to stop the program" << std::endl
               << std::endl;
 
@@ -33,11 +16,11 @@ int main()
     if (server.listenSocket())
         return 3;
 
-    std::thread receiveFilesThread(&FtpServer::receiveFiles, &server, std::ref(onSwitch));
-    std::thread turnSwitchOffThread(&turnSwitchOff, std::ref(onSwitch));
+    std::thread receiveFilesThread(&FtpServer::receiveFiles, &server);
+    std::thread turnSwitchOffThread(&FtpServer::turnSwitchOff, &server);
 
     receiveFilesThread.join();
     turnSwitchOffThread.join();
 
     return 0;
-}
+}   

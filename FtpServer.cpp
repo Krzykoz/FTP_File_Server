@@ -3,6 +3,7 @@
 #include <unistd.h> // read(), write(), close()
 #include <arpa/inet.h>
 #include <poll.h>
+#include <atomic>
 #include <string>
 #include <vector>
 #include <map>
@@ -18,6 +19,20 @@ FtpServer::~FtpServer()
     for (int index = 0; index < sockets.size(); index++){
         std::remove(files.at(sockets[index].fd).second.c_str());
         closeFileAndSocket(index);
+    }
+}
+
+void FtpServer::turnSwitchOff()
+{
+    while (true)
+    {
+        std::string consoleInput;
+        std::cin >> consoleInput;
+        if (consoleInput == "exit")
+        {
+            onSwitch = false;
+            break;
+        }
     }
 }
 
@@ -171,7 +186,7 @@ int FtpServer::handleExistingConnections(int &index)
     return 0;
 }
 
-int FtpServer::receiveFiles(std::atomic_bool &onSwitch)
+int FtpServer::receiveFiles()
 {
     while (onSwitch)
     {
