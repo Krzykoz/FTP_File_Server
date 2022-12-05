@@ -1,12 +1,10 @@
 #include <iostream>
 #include <thread>
 
-#include "FtpServer.hpp"
+#include "FtpServer.h"
 
-int main()
-{
-    std::cout << "Type \"exit\" to stop the program" << std::endl
-              << std::endl;
+int main() {
+    std::cout << "Type \"exit\" to stop the program" << std::endl << std::endl;
 
     auto server = FtpServer();
     if (server.createSocket())
@@ -23,4 +21,4 @@ int main()
     turnSwitchOffThread.join();
 
     return 0;
-}   
+}

@@ -1,3 +1,6 @@
+#ifndef FTP_FILE_SERVER_FTPSERVER_H
+#define FTP_FILE_SERVER_FTPSERVER_H
+
 #include <string>
 #include <map>
 #include <vector>
@@ -5,14 +8,12 @@
 #include <arpa/inet.h>
 #include <poll.h>
 
-
-class FtpServer
-{
+class FtpServer {
 private:
     std::atomic_bool onSwitch = true;
     std::vector<pollfd> sockets;
     std::map<int, std::pair<FILE *, std::string> > files;
-    sockaddr_in serverAddress;
+    sockaddr_in serverAddress{};
     int fileCounder = 0;
     int bufforSize = 64;
     int port = 8080;
@@ -27,9 +28,12 @@ public:
     int listenSocket(int backlog = 5);
     int receiveFiles();
     std::string createFileName(sockaddr_in p_socketAddres);
-    int createFile(int fileDescriptor, sockaddr_in p_socketAddres);
+    int createFile(int fileDescriptor);
     int handleNewConnections(int &index);
     void closeFileAndSocket(int &index);
-    int writeDataToFile(int &index, char *buffor, int recivedBytes);
+    int writeDataToFile(int &index, char *buffor, ssize_t recivedBytes);
     int handleExistingConnections(int &index);
 };
+
+
+#endif //FTP_FILE_SERVER_FTPSERVER_H
