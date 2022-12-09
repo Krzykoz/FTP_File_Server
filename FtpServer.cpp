@@ -36,24 +36,26 @@ int FtpServer::createSocket() {
     if (sockfd == -1) {
         std::cerr << "Socket creation failed";
         return 1;
-    } else {
-        std::cout << "Socket successfully created"
-                  << std::endl;
-        pollfd poll = {sockfd, POLLIN};
-        sockets.push_back(poll);
-        return 0;
-    }
+    } 
+
+    std::cout << "Socket successfully created"
+              << std::endl;
+    pollfd poll = {sockfd, POLLIN};
+    sockets.push_back(poll);
+    return 0;
 }
 
 int FtpServer::bindSocket() {
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
     serverAddress.sin_port = htons(port);
+
     if ((bind(sockets.front().fd, (sockaddr *) &serverAddress, sizeof(serverAddress))) != 0) {
         std::cerr << "Socket bind failed";
         return 1;
-    } else
-        std::cout << "Socket successfully binded" << std::endl;
+    }
+
+    std::cout << "Socket successfully binded" << std::endl;
     return 0;
 }
 
@@ -61,10 +63,9 @@ int FtpServer::listenSocket(int backlog) {
     if ((listen(sockets.front().fd, backlog)) != 0) {
         std::cerr << "Listen failed";
         return 1;
-    } else {
-        std::cout << "Server listening" << std::endl;
-        return 0;
     }
+    std::cout << "Server listening" << std::endl;
+    return 0;
 }
 
 std::string FtpServer::createFileName(sockaddr_in p_socketAddres) {
@@ -101,15 +102,13 @@ int FtpServer::handleNewConnections(int &index) {
     if (connfd < 0) {
         std::cerr << "Server accept failed";
         return 1;
-    } else {
-        std::cout << "Server accepted the client" << std::endl;
-
-        pollfd poll = {connfd, POLLIN};
-        sockets.push_back(poll);
-
-        if (this->createFile(connfd))
-            return 1;
     }
+    std::cout << "Server accepted the client" << std::endl;
+
+    pollfd poll = {connfd, POLLIN};
+    sockets.push_back(poll);
+
+    if (this->createFile(connfd)) return 1;
 
     return 0;
 }
