@@ -12,6 +12,7 @@ class FtpServer {
 private:
     std::atomic_bool onSwitch = true;
     std::vector<pollfd> sockets;
+    std::map<int, std::pair<bool, std::string> > headers;
     std::map<int, std::pair<FILE *, std::string> > files;
     sockaddr_in serverAddress{};
     int fileCounder = 0;
@@ -29,10 +30,14 @@ public:
     int receiveFiles();
     std::string createFileName(sockaddr_in p_socketAddres);
     int createFile(int fileDescriptor);
+    int createHeader(int &index);
     int handleNewConnections(int &index);
     void closeFileAndSocket(int &index);
     int writeDataToFile(int &index, char *buffor, ssize_t recivedBytes);
-    int handleExistingConnections(int &index);
+    int handleExistingUploads(int &index);
+    int SendAllBytes(int &index, char *buffor, int bytesToSend);
+    int handleExistingDownloads(int &index);
+
 };
 
 
